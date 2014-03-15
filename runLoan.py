@@ -16,19 +16,21 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.cross_validation import KFold
 from sklearn.metrics import f1_score
 
-vars = {'defaultRF'		:	['f777','f2','f527_diff_f528','f528_diff_f274','f222','logf271'],
-		'defaultGBM'	:	['f777','f2','f527_diff_f528','f528_diff_f274','f222','f68'],
-		'lossRF' 		:	['f2','f528_diff_f274','f332','f67','f25','f120','f530','f766','f376','f670','f228','f652','f761','f406','f596','f777'],
-		'lossGBM' 		: 	['f2','f528_diff_f274','f332','f67','f25','f120','f766','f376','f39','f670','f228','f652','f415','f596','f406','f13','f355'],
-		'lossSVM' 		:	['f2','f332','f67','f25','f120','f766','f376','f670','f228','f652','f761','f4','f13','f386','f596','f9','f355','f406','f518','f328','f696','f674','f777','f718','f778_27']
-		}
+vars = {
+	'defaultRF'	:	['f777','f2','f527_diff_f528','f528_diff_f274','f222','logf271'],
+	'defaultGBM'	:	['f777','f2','f527_diff_f528','f528_diff_f274','f222','f68'],
+	'lossRF' 	:	['f2','f528_diff_f274','f332','f67','f25','f120','f530','f766','f376','f670','f228','f652','f761','f406','f596','f777'],
+	'lossGBM' 	: 	['f2','f528_diff_f274','f332','f67','f25','f120','f766','f376','f39','f670','f228','f652','f415','f596','f406','f13','f355'],
+	'lossSVM' 	:	['f2','f332','f67','f25','f120','f766','f376','f670','f228','f652','f761','f4','f13','f386','f596','f9','f355','f406','f518','f328','f696','f674','f777','f718','f778_27']
+}
 
-models = {'defaultRF'	:	{'n_estimators':145,'max_depth':18, 'min_samples_split':4,'max_features':None},
-		  'defaultGBM'	:	{'n_estimators':65,'max_depth':6, 'learning_rate':0.300,'max_features':'sqrt'},
-		  'lossRF'		:	{'n_estimators':275,'max_depth':22, 'min_samples_split':2,'max_features':'sqrt'},
-		  'lossGBM'		:	{'n_estimators':160,'max_depth':5, 'learning_rate':0.109,'max_features':'sqrt'},
-		  'lossSVM'		:	{'C':2.5,'gamma': 0.027}
-		  }
+models = {
+	'defaultRF'	:	{'n_estimators':145,'max_depth':18, 'min_samples_split':4,'max_features':None},
+	'defaultGBM'	:	{'n_estimators':65,'max_depth':6, 'learning_rate':0.300,'max_features':'sqrt'},
+	'lossRF'	:	{'n_estimators':275,'max_depth':22, 'min_samples_split':2,'max_features':'sqrt'},
+	'lossGBM'	:	{'n_estimators':160,'max_depth':5, 'learning_rate':0.109,'max_features':'sqrt'},
+	'lossSVM'	:	{'C':2.5,'gamma': 0.027}
+}
 		
 ######################
 ## Helper Functions ##
