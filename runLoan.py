@@ -188,7 +188,7 @@ def runLossModels(train,test,seed):
 ##########
 ## Main ##
 ##########
-def main(n=5):
+def main():
 	""" Combine functions to make predictions """
 	#load data
 	train, test = loadDat()
