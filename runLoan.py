@@ -19,9 +19,9 @@ from sklearn.metrics import f1_score
 vars = {
 	'defaultRF'	:	['f777','f2','f527_diff_f528','f528_diff_f274','f222','logf271'],
 	'defaultGBM'	:	['f777','f2','f527_diff_f528','f528_diff_f274','f222','f68'],
-	'lossRF' 	:	['f2','f528_diff_f274','f332','f67','f25','f120','f530','f766','f376','f670','f228','f652','f761','f406','f596','f777'],
-	'lossGBM' 	: 	['f2','f528_diff_f274','f332','f67','f25','f120','f766','f376','f39','f670','f228','f652','f415','f596','f406','f13','f355'],
-	'lossSVM' 	:	['f2','f332','f67','f25','f120','f766','f376','f670','f228','f652','f761','f4','f13','f386','f596','f9','f355','f406','f518','f328','f696','f674','f777','f718','f778_27']
+	'lossRF'	:	['f2','f528_diff_f274','f332','f67','f25','f120','f530','f766','f376','f670','f228','f652','f761','f406','f596','f777'],
+	'lossGBM'	: 	['f2','f528_diff_f274','f332','f67','f25','f120','f766','f376','f39','f670','f228','f652','f415','f596','f406','f13','f355'],
+	'lossSVM'	:	['f2','f332','f67','f25','f120','f766','f376','f670','f228','f652','f761','f4','f13','f386','f596','f9','f355','f406','f518','f328','f696','f674','f777','f718','f778_27']
 }
 
 models = {
@@ -78,12 +78,14 @@ def loadDat(wd='/usr/local/tmp/dmcgarry/kag/loan',vars=vars):
 	uniqueVars = list(set(chain.from_iterable([x for x in vars.itervalues()])))
 	#load training + test data
 	train = pd.read_csv('train_v2.csv')	
+	train['f778_27'] = train['f778'].apply(lambda x: 1 if x == 27 else 0)
 	train['f527_diff_f528'] = train.f527 - train.f528
 	train['f528_diff_f274'] = train.f528 - train.f274
 	train['logf271'] = np.log(train['f271'] + 1)
 	loss = train.loss
 	train = train[uniqueVars]
 	test = pd.read_csv('test_v2.csv')
+	test['f778_27'] = test['f778'].apply(lambda x: 1 if x == 27 else 0)
 	test['f527_diff_f528'] = test.f527 - test.f528
 	test['f528_diff_f274'] = test.f528 - test.f274
 	test['logf271'] =  np.log(test['f271'] + 1)
@@ -113,45 +115,42 @@ def loadDat(wd='/usr/local/tmp/dmcgarry/kag/loan',vars=vars):
 ###################
 ## Default Model ##
 ###################
-def defaultModel(model,vars,t,train,test):
+def defaultModel(model,vars,t,train,test,seed):
 	""" Make a model for default """
-	cv = KFold(len(train),5,shuffle=True,random_state=5)
+	cv = KFold(len(train),5,shuffle=True,random_state=seed)
 	train[t+'DefaultPred'] = 0.0
 	for tr, val in cv:
 		model.fit(train[vars].ix[train.index[tr]],train['default'].ix[train.index[tr]])
 		train[t+'DefaultPred'].ix[train.index[val]] = model.predict_proba(train[vars].ix[train.index[val]])[:,1]
 	model.fit(train[vars],train.default)
 	test[t+'DefaultPred'] = model.predict_proba(test[vars])[:,1]
-	return {'AUC':roc_auc_score(train.default, train[t+'DefaultPred']),'F1':bestF1(train.default,train[t+'DefaultPred'])}
+	result = {'AUC':roc_auc_score(train.default, train[t+'DefaultPred']),'F1':bestF1(train.default,train[t+'DefaultPred'])}
+	print t + " AUC: " + str(np.round(result['AUC'],5))
+	print t + " F1:  " + str(np.round(result['F1'],5))
+	return result
 
-def runDefaultModels(train,test):
+def runDefaultModels(train,test,seed):
 	""" Run all default models """
 	#RF Model
 	rfDefault = defaultModel(
-	 	RandomForestClassifier(n_estimators=models['defaultRF']['n_estimators'],max_depth=models['defaultRF']['max_depth'],min_samples_split=models['defaultRF']['min_samples_split'],max_features=models['defaultRF']['max_features'],n_jobs=10,random_state=34),
-	 	vars['defaultRF'],"rf",train,test)
-	print "RF AUC: " + str(np.round(rfDefault['AUC'],5))
-	print "RF F1:  " + str(np.round(rfDefault['F1'],5))
+		RandomForestClassifier(n_estimators=models['defaultRF']['n_estimators'],max_depth=models['defaultRF']['max_depth'],min_samples_split=models['defaultRF']['min_samples_split'],max_features=models['defaultRF']['max_features'],n_jobs=10,random_state=seed+29),
+		vars['defaultRF'],"rf",train,test,seed)
 	#GBM Model
 	gbmDefault = defaultModel(
-	 	GradientBoostingClassifier(n_estimators=models['defaultGBM']['n_estimators'],learning_rate=models['defaultGBM']['learning_rate'],max_depth=models['defaultGBM']['max_depth'],max_features=models['defaultGBM']['max_features'],random_state=34),
-	 	vars['defaultGBM'],"gbm",train,test)
-	print "GBM AUC: " + str(np.round(gbmDefault['AUC'],5))
-	print "GBM F1:  " + str(np.round(gbmDefault['F1'],5))
-	#Blend Models
+		GradientBoostingClassifier(n_estimators=models['defaultGBM']['n_estimators'],learning_rate=models['defaultGBM']['learning_rate'],max_depth=models['defaultGBM']['max_depth'],max_features=models['defaultGBM']['max_features'],random_state=seed+29),
+		vars['defaultGBM'],"gbm",train,test,seed)
 	train['defaultPred'] = train['rfDefaultPred']*0.55 + train['gbmDefaultPred']*0.45
 	test['defaultPred'] = test['rfDefaultPred']*0.55 + test['gbmDefaultPred']*0.45
-	print "Avg AUC: " + str(np.round(roc_auc_score(train.default, train['defaultPred']),5))
-	print "Avg F1:  " + str(np.round(bestF1(train.default,train['defaultPred']),5))
+	print "blended AUC: " + str(np.round(roc_auc_score(train.default, train['defaultPred']),5))
+	print "blended F1:  " + str(np.round(bestF1(train.default,train['defaultPred']),5))
 	return train,test
-
 
 ################
 ## Loss Model ##
 ################
-def lossModel(model,vars,t,train,test):
+def lossModel(model,vars,t,train,test,seed):
 	""" Make a loss model """
-	cv = KFold(len(train),5,shuffle=True,random_state=5)
+	cv = KFold(len(train),5,shuffle=True,random_state=seed)
 	train[t+'LossPred'] = 0.0
 	for tr, val in cv:
 		tmp = train.ix[train.index[tr]]
@@ -161,50 +160,48 @@ def lossModel(model,vars,t,train,test):
 	tmp = train[train.default > 0]
 	model.fit(tmp[vars],np.log(tmp['loss']))
 	test[t+'LossPred'] = np.e**model.predict(test[vars])
-	return checkCutOff(train.loss,train[t+'LossPred'],train.defaultPred)
+	result = checkCutOff(train.loss,train[t+'LossPred'],train.defaultPred)
+	print t + " MAE:", result['mae']
+	return result
 
-def runLossModels(train,test):
+def runLossModels(train,test,seed):
 	""" Run all loss models """
 	#RF Model
 	rfLoss = lossModel(
-		RandomForestRegressor(n_estimators=models['lossRF']['n_estimators'],max_depth=models['lossRF']['max_depth'],min_samples_split=models['lossRF']['min_samples_split'],max_features=models['lossRF']['max_features'],n_jobs=10,random_state=34),
-		vars['lossRF'],"rf",train,test)
-	print "RF MAE:", rfLoss['mae']
+		RandomForestRegressor(n_estimators=models['lossRF']['n_estimators'],max_depth=models['lossRF']['max_depth'],min_samples_split=models['lossRF']['min_samples_split'],max_features=models['lossRF']['max_features'],n_jobs=10,random_state=seed+29),
+		vars['lossRF'],"rf",train,test,seed)
 	#GBM Model
 	gbmLoss = lossModel(
-		GradientBoostingRegressor(n_estimators=models['lossGBM']['n_estimators'],learning_rate=models['lossGBM']['learning_rate'],max_depth=models['lossGBM']['max_depth'],max_features=models['lossGBM']['max_features'],random_state=34),
-		vars['lossGBM'],"gbm",train,test)
-	print "GBM MAE:", gbmLoss['mae']
+		GradientBoostingRegressor(n_estimators=models['lossGBM']['n_estimators'],learning_rate=models['lossGBM']['learning_rate'],max_depth=models['lossGBM']['max_depth'],max_features=models['lossGBM']['max_features'],random_state=seed+29),
+		vars['lossGBM'],"gbm",train,test,seed)
+	#SVM Model
 	svmLoss = lossModel(
-		SVR(C=models['lossSVM']['C'],gamma=models['lossSVM']['gamma'],max_iter=10**5,random_state=34),
-		vars['lossSVM'],"svm",train,test)
-	print "SVM MAE:", svmLoss['mae']
+		SVR(C=models['lossSVM']['C'],gamma=models['lossSVM']['gamma'],max_iter=10**5,random_state=seed+29),
+		vars['lossSVM'],"svm",train,test,seed)
 	#Blend Models
 	minMAE = lambda x: mae(applyCut(train['rfLossPred'],train['defaultPred'],rfLoss['Cutoff'])*x[0] + applyCut(train['gbmLossPred'],train['defaultPred'],gbmLoss['Cutoff'])*x[1] + applyCut(train['svmLossPred'],train['defaultPred'],svmLoss['Cutoff'])*x[2],train.loss)
-	weights = minimize(minMAE, [0.15,0.35,0.50], method='L-BFGS-B', bounds=((0,1),(0,1),(0,1)))
-	print "Blended MAE:",weights.fun
+	weights = minimize(minMAE, [0.15,0.35,0.5], method='L-BFGS-B', bounds=((0,1),(0,1),(0,1)))
+	print "blended MAE:",weights.fun
 	test['loss'] = applyCut(test['rfLossPred'],test['defaultPred'],rfLoss['Cutoff'])*weights.x[0] + applyCut(test['gbmLossPred'],test['defaultPred'],gbmLoss['Cutoff'])*weights.x[1] + applyCut(test['svmLossPred'],test['defaultPred'],svmLoss['Cutoff'])*weights.x[2]
-	return train,test
-
+	return train, test
+	
 ##########
 ## Main ##
 ##########
-def main():
+def main(n=5):
 	""" Combine functions to make predictions """
 	#load data
 	train, test = loadDat()
 	#make default models
-	train, test = runDefaultModels(train, test)
+	train, test = runDefaultModels(train, test, 5)
 	#make loss models
-	train, test = runLossModels(train, test)
+	train, test = runLossModels(train, test, 5)
 	#look at predictions
 	print "Percent of Non Defaults:", test.loss.apply(lambda x: x > 0).mean()
 	print "Average Loss:", test.loss.mean()
 	#save prediction
 	test[['id','loss']].to_csv("pred.csv",index=False)
 
-
 # run everything when calling script from CLI
 if __name__ == "__main__":
 	main()
-	
